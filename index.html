@@ -16,8 +16,224 @@
 	<body>
 		<div class="reveal">
 			<div class="slides">
-				<section>Slide 1</section>
-				<section>Slide 2</section>
+				<section>
+					<h1>Web Audio API</h1>
+					<p class="fragment">
+						  The Web Audio API provides a powerful and versatile system for controlling audio on the Web, 
+						  allowing developers to choose audio sources, add effects to audio, create audio visualizations, 
+						  apply spatial effects (such as panning) and much more.
+					</p>
+				</section>
+				<section>
+						<pre data-id="code-wrapper"><code class="hljs" data-trim data-line-numbers>
+							var context = new (window.AudioContext || window.webkitAudioContext)();
+						</code></pre>
+						<p class="fragment">
+							Safari requires a WebKit prefix to support AudioContext
+					  </p>
+				</section>
+				<section>
+					<h2>Stages of audio manipulation in<br>WEB Audio Api.</h2>
+					<img src="./examples/assets/workflow.png" alt="workflow">
+				</section>
+				<section>
+					<h2>Source types</h2>
+					<p>
+						Oscillator - mathematically calculated sounds;<br><hr>
+                        Audio samples - from audio / video files;<br><hr>
+                        Audio stream - audio from webcams or microphones;<br>
+					</p>
+				</section>
+				<section>
+					<section>
+						<h2>Oscillator</h2>
+						<p class="fragment">
+							<img src="./examples/assets/waveforms.png" alt="waveforms" width="780px">
+						</p>
+					</section>
+					<section>
+						<p>The Web Audio API uses <span class="section__main-word">OscillatorNode</span> to represent the repeating signal</p>
+						<pre data-id="code-wrapper"><code class="hljs" data-trim data-line-numbers>
+							OscillatorNode.type = 'sine'|'square'|'triangle'|'sawtooth';
+						</code></pre>
+					</section>
+					<section>
+						<p>Oscillator start</p>
+						<pre data-id="code-wrapper"><code class="hljs" data-trim data-line-numbers>
+							var context = new (window.AudioContext || window.webkitAudioContext)();
+							
+							var oscillator = context.createOscillator();
+							
+							oscillator.type = 'sine';
+							oscillator.frequency.value = 440;
+							oscillator.connect(context.destination);
+							oscillator.start();
+													</code></pre>
+						<p class="fragment fade-left">
+							We need to create a Web Audio API context;<br>
+                            Create an oscillator node within this context;<br>
+                            Select the type of signal;<br>
+                            Set the frequency;<br>
+                            Connect the oscillator;<br>
+                            Run the oscillator;<br>
+						</p>
+					</section>
+					<section>
+						<pre data-id="code-wrapper"><code class="hljs" data-trim data-line-numbers>
+							var context = new (window.AudioContext || window.webkitAudioContext)();
+							
+							var oscillator = context.createOscillator();
+							
+							oscillator.type = 'sine';
+							oscillator.frequency.value = 440;
+							oscillator.connect(context.destination);
+							oscillator.start();
+						</code></pre>
+					</section>
+					<section>
+						<pre data-id="code-wrapper"><code class="hljs" data-trim data-line-numbers>
+							var now = context.currentTime;
+							oscillator.play(now + 1);
+							oscillator.stop(now + 3);
+						</code></pre>
+					</section>
+				</section>
+				<section>
+					<section>
+						<h2>AudioBuffer</h2>
+						<p>The AudioBuffer interface represents a short audio asset residing in memory, 
+							created from an audio file using the BaseAudioContext.decodeAudioData method, 
+							or created with raw data using BaseAudioContext.createBuffer. 
+							Once decoded into this form, the audio can then be put into an AudioBufferSourceNode.</p>
+					</section>
+					<section>
+						<pre data-id="code-wrapper"><code class="hljs" data-trim data-line-numbers>
+							class Buffer {
+
+								constructor(context, urls) {  
+								  this.context = context;
+								  this.urls = urls;
+								  this.buffer = [];
+								}
+							  
+								loadSound(url, index) {
+								  let request = new XMLHttpRequest();
+								  request.open('get', url, true);
+								  request.responseType = 'arraybuffer';
+								  let thisBuffer = this;
+								  request.onload = function() {
+									thisBuffer.context.decodeAudioData(request.response, function(buffer) {
+									  thisBuffer.buffer[index] = buffer;
+									  updateProgress(thisBuffer.urls.length);
+									  if(index == thisBuffer.urls.length-1) {
+										thisBuffer.loaded();
+									  }       
+									});
+								  };
+								  request.send();
+								};
+							  
+								loadAll() {
+								  this.urls.forEach((url, index) => {
+									this.loadSound(url, index);
+								  })
+								}
+							  
+								loaded() {
+								  // what happens when all the files are loaded
+								}
+							  
+								getSoundByIndex(index) {
+								  return this.buffer[index];
+								}
+							  
+							  }
+						</code></pre>
+					</section>
+					<section>
+						<pre data-id="code-wrapper"><code class="hljs" data-trim data-line-numbers>
+							class Sound() {
+
+								constructor(context, buffer) {
+								  this.context = context;
+								  this.buffer = buffer;
+								}
+							  
+								init() {
+								  this.gainNode = this.context.createGain();
+								  this.source = this.context.createBufferSource();
+								  this.source.buffer = this.buffer;
+								  this.source.connect(this.gainNode);
+								  this.gainNode.connect(this.context.destination);
+								}
+							  
+								play() {
+								  this.setup();
+								  this.source.start(this.context.currentTime);
+								}  
+							  
+								stop() {
+								  this.gainNode.gain.exponentialRampToValueAtTime(0.001, this.context.currentTime + 0.5);
+								  this.source.stop(this.context.currentTime + 0.5);
+								}
+							  
+							  }
+						</code></pre>
+						<pre data-id="code-wrapper"><code class="fragment" class="hljs" data-trim data-line-numbers>
+							let buffer = new Buffer(context, sounds);
+							buffer.loadAll();
+
+							sound = new Sound(context, buffer.getSoundByIndex(id));
+							sound.play();
+						</code></pre>
+					</section>
+				</section>
+				<section>
+					<section>
+						<h2>Defining audio effects filters</h2>
+						<p>Interfaces for defining effects that you want to apply to your audio sources.</p>
+					</section>
+					<section>
+						<h2>BiquadFilterNode</h2>
+						<p>
+							The <span class="section__main-word">BiquadFilterNode</span> interface represents a simple low-order filter. 
+							It is an AudioNode that can represent different kinds of filters, 
+							tone control devices, or graphic equalizers.</p>
+					</section>
+					<section>
+						<h2>DelayNode</h2>
+						<p>
+							The <span class="section__main-word">DelayNode</span> interface represents a delay-line; 
+							an AudioNode audio-processing module that causes a delay between the arrival 
+							of an input data and its propagation to the output.
+						</p>
+					</section>
+					<section>
+						<h2>GainNode</h2>
+						<p>
+							The <span class="section__main-word">GainNode</span> interface represents a change in volume. 
+							It is an AudioNode audio-processing module that causes a given gain to be applied to the input data before its propagation to the output.
+						</p>
+					</section>
+				</section>
+				<section>
+					<section>
+						<h2>Defining audio destinations</h2>
+						<p>Once you are done processing your audio, these interfaces define where to output it.</p>
+					</section>
+					<section>
+						<h2>AudioDestinationNode</h2>
+						<p>The <span class="section__main-word">AudioDestinationNode</span> interface represents the end destination of an audio source in a given context — usually the speakers of your device.</p>
+					</section>
+					<section>
+						<h2>MediaStreamAudioDestinationNode</h2>
+						<p>
+							The <span class="section__main-word">MediaStreamAudioDestinationNode</span> interface represents an audio destination consisting of a 
+							WebRTC MediaStream with a single AudioMediaStreamTrack, which can be used in a similar way to a MediaStream obtained from getUserMedia(). 
+							It is an AudioNode that acts as an audio destination.
+						</p>
+					</section>
+				</section>
 			</div>
 		</div>
 

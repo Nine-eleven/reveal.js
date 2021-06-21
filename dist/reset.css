@@ -28,3 +28,8 @@ article, aside, details, figcaption, figure,
 footer, header, hgroup, main, menu, nav, section {
   display: block;
 }
+
+.section__main-word {
+  color: rgb(28, 240, 64);
+  font-size: 120%;
+}
